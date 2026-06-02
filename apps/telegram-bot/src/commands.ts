@@ -9,36 +9,18 @@ function isAdmin(chatId: number): boolean {
 
 export function registerCommands(bot: Telegraf, engine: EngineApi, config: BotConfigStore): void {
   bot.start((ctx) => {
-    ctx.reply("Solana MEV bot control online. Default mode should stay dry_run until tested.");
+    if (!isAdmin(ctx.chat.id)) return;
+    ctx.reply(
+      "Bot online. Running in background mode. Commands:\n" +
+        "/status - check engine state\n" +
+        "/set_dry_run on|off - toggle dry-run mode"
+    );
   });
 
   bot.command("status", async (ctx) => {
     if (!isAdmin(ctx.chat.id)) return;
     const status = await engine.status();
     ctx.reply(status);
-  });
-
-  bot.command("pause", async (ctx) => {
-    if (!isAdmin(ctx.chat.id)) return;
-    await engine.pause();
-    ctx.reply("Engine paused.");
-  });
-
-  bot.command("resume", async (ctx) => {
-    if (!isAdmin(ctx.chat.id)) return;
-    await engine.resume();
-    ctx.reply("Engine resumed.");
-  });
-
-  bot.command("set_threshold", async (ctx) => {
-    if (!isAdmin(ctx.chat.id)) return;
-    const value = Number(ctx.message.text.split(/\s+/)[1]);
-    if (!Number.isFinite(value) || value < 0) {
-      ctx.reply("Usage: /set_threshold <bps>");
-      return;
-    }
-    await config.setRiskNumber("min_profit_bps", value);
-    ctx.reply(`min_profit_bps set to ${value}. Restart engine to apply file config.`);
   });
 
   bot.command("set_dry_run", async (ctx) => {
@@ -52,4 +34,3 @@ export function registerCommands(bot: Telegraf, engine: EngineApi, config: BotCo
     ctx.reply(`dry_run set to ${value}. Restart engine to apply file config.`);
   });
 }
-

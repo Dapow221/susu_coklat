@@ -1,6 +1,6 @@
 [rpc]
 http_url = "https://api.mainnet-beta.solana.com"
-ws_url = "wss://api.mainnet-beta.solana.com"
+ws_url = "wss://pump.helius-rpc.com/"
 commitment = "processed"
 
 [jupiter]

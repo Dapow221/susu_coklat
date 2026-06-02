@@ -1,22 +1,26 @@
 use anyhow::Result;
 use axum::{
-    extract::State,
+    extract::{Query, State},
     response::IntoResponse,
     routing::{get, post},
-    Router,
+    Json, Router,
 };
 use execution::{jito_bundle::JitoClient, simulator};
 use jupiter_client::quote::JupiterClient;
 use market_data::pool_subscriber::PoolSubscriber;
+use serde::{Deserialize, Serialize};
 use shared::events::EngineEvent;
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 use tracing::{info, warn};
 
 use crate::{config::Settings, state::EngineState};
 
 pub async fn run(settings: Settings) -> Result<()> {
-    let state = Arc::new(Mutex::new(EngineState::default()));
+    let state = Arc::new(Mutex::new(EngineState {
+        dry_run: settings.risk.dry_run,
+        ..Default::default()
+    }));
     state
         .lock()
         .await
@@ -70,10 +74,18 @@ pub async fn run(settings: Settings) -> Result<()> {
     let _ = simulator::simulate;
     let _ = jito;
 
+    // Background scan loop: emits heartbeats (and would emit opportunity events
+    // once real pool decoding is wired in). Runs silently.
+    let scan_state = state.clone();
+    tokio::spawn(async move {
+        run_scan_loop(scan_state, enabled_count).await;
+    });
+
     let app = Router::new()
         .route("/status", get(status))
         .route("/pause", post(pause))
         .route("/resume", post(resume))
+        .route("/events", get(events))
         .with_state(state);
 
     let addr: SocketAddr = settings.engine.bind_addr.parse()?;
@@ -83,16 +95,62 @@ pub async fn run(settings: Settings) -> Result<()> {
     Ok(())
 }
 
+async fn run_scan_loop(state: Arc<Mutex<EngineState>>, enabled_count: usize) {
+    let mut interval = tokio::time::interval(Duration::from_secs(30));
+    // Burn the immediate first tick so heartbeats start 30s after boot.
+    interval.tick().await;
+    loop {
+        interval.tick().await;
+        let message = if enabled_count == 0 {
+            "no pools enabled - heartbeating in idle mode".to_string()
+        } else {
+            format!("watching {enabled_count} pool(s)")
+        };
+        let mut s = state.lock().await;
+        s.push_event(EngineEvent::heartbeat(message));
+    }
+}
+
+#[derive(Deserialize)]
+struct EventsQuery {
+    since: Option<u64>,
+}
+
+#[derive(Serialize)]
+struct EventsResponse {
+    events: Vec<EngineEvent>,
+    next_cursor: u64,
+    dry_run: bool,
+}
+
+async fn events(
+    State(state): State<Arc<Mutex<EngineState>>>,
+    Query(query): Query<EventsQuery>,
+) -> impl IntoResponse {
+    let cursor = query.since.unwrap_or(0);
+    let s = state.lock().await;
+    let events = s.events_since(cursor);
+    Json(EventsResponse {
+        events,
+        next_cursor: s.event_counter,
+        dry_run: s.dry_run,
+    })
+}
+
 async fn status(State(state): State<Arc<Mutex<EngineState>>>) -> impl IntoResponse {
-    let state = state.lock().await;
-    let mode = if state.paused { "paused" } else { "running" };
-    let last_event = state
+    let s = state.lock().await;
+    let mode = if s.paused { "paused" } else { "running" };
+    let dry_run = if s.dry_run { "on" } else { "off" };
+    let last_event = s
         .recent_events
         .last()
         .map(|event| event.message.as_str())
         .unwrap_or("no events");
 
-    format!("Engine status: {mode}\nLast event: {last_event}")
+    format!(
+        "Engine status: {mode}\nDry run: {dry_run}\nEvents emitted: {}\nLast event: {last_event}",
+        s.event_counter
+    )
 }
 
 async fn pause(State(state): State<Arc<Mutex<EngineState>>>) -> impl IntoResponse {
