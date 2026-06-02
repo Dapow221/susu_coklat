@@ -1,0 +1,13 @@
+[package]
+name = "jupiter-client"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+shared = { path = "../shared" }
+

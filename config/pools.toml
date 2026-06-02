@@ -1,0 +1,20 @@
+[[pools]]
+name = "example-dlmm"
+kind = "dlmm"
+address = "REPLACE_WITH_POOL_ACCOUNT"
+base_mint = "REPLACE_WITH_BASE_MINT"
+quote_mint = "REPLACE_WITH_QUOTE_MINT"
+fee_bps = 25
+bin_step_bps = 10
+enabled = false
+
+[[pools]]
+name = "example-pumpswap"
+kind = "pumpswap"
+address = "REPLACE_WITH_POOL_ACCOUNT"
+base_mint = "REPLACE_WITH_BASE_MINT"
+quote_mint = "REPLACE_WITH_QUOTE_MINT"
+fee_bps = 30
+bin_step_bps = 0
+enabled = false
+

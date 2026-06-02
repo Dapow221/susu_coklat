@@ -1,0 +1,21 @@
+[package]
+name = "engine"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+axum.workspace = true
+clap.workspace = true
+config.workspace = true
+execution = { path = "../execution" }
+jupiter-client = { path = "../jupiter-client" }
+market-data = { path = "../market-data" }
+serde.workspace = true
+shared = { path = "../shared" }
+strategy = { path = "../strategy" }
+tokio.workspace = true
+toml.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

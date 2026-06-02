@@ -1,0 +1,35 @@
+[workspace]
+members = [
+  "crates/engine",
+  "crates/market-data",
+  "crates/strategy",
+  "crates/jupiter-client",
+  "crates/execution",
+  "crates/shared"
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+version = "0.1.0"
+
+[workspace.dependencies]
+anyhow = "1"
+async-trait = "0.1"
+axum = "0.7"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "=4.5.4", features = ["derive", "env"] }
+config = "0.14"
+reqwest = { version = "=0.12.5", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+solana-client = "2"
+solana-sdk = "2"
+thiserror = "1"
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = { version = "0.24", default-features = false, features = ["rustls-tls-webpki-roots"] }
+toml = "0.8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "=1.10.0", features = ["v4", "serde"] }

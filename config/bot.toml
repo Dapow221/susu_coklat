@@ -1,0 +1,29 @@
+[rpc]
+http_url = "https://api.mainnet-beta.solana.com"
+ws_url = "wss://api.mainnet-beta.solana.com"
+commitment = "processed"
+
+[jupiter]
+base_url = "https://lite-api.jup.ag"
+only_direct_routes = true
+restrict_intermediate_tokens = true
+slippage_bps = 30
+max_accounts = 64
+
+[jito]
+block_engine_url = "https://mainnet.block-engine.jito.wtf"
+min_tip_lamports = 1000
+max_tip_lamports = 50000
+
+[risk]
+dry_run = true
+min_profit_bps = 20
+max_trade_lamports = 100000000
+max_daily_loss_lamports = 500000000
+min_wallet_balance_lamports = 200000000
+safety_margin_bps = 5
+
+[engine]
+bind_addr = "127.0.0.1:8787"
+poll_fallback_ms = 750
+
