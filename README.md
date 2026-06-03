@@ -107,12 +107,12 @@ Edit `config/bot.toml` under `[rpc]`. The defaults are:
 
 ```toml
 [rpc]
-http_url = "https://api.mainnet-beta.solana.com"
-ws_url = "wss://api.mainnet-beta.solana.com"
+http_url = "https://pump.helius-rpc.com/"
+ws_url = "https://pump.helius-rpc.com/"
 commitment = "processed"
 ```
 
-For better latency on Pump.fun trading, point `ws_url` at a dedicated provider like `wss://pump.helius-rpc.com/` (Helius's public Pump.fun endpoint, no key required). For other DEXes, use `wss://mainnet.helius-rpc.com/?api-key=YOUR_KEY` or your own RPC.
+For Pump.fun trading, point the RPC URLs at Helius's public Pump.fun endpoint: `https://pump.helius-rpc.com/`. For other DEXes, use your preferred HTTP/WSS RPC provider.
 
 ### 6. Start the Rust Engine
 

@@ -1,6 +1,6 @@
 [rpc]
-http_url = "https://api.mainnet-beta.solana.com"
-ws_url = "wss://pump.helius-rpc.com/"
+http_url = "https://pump.helius-rpc.com/"
+ws_url = "https://pump.helius-rpc.com/"
 commitment = "processed"
 
 [jupiter]
@@ -26,4 +26,3 @@ safety_margin_bps = 5
 [engine]
 bind_addr = "127.0.0.1:8787"
 poll_fallback_ms = 750
-
