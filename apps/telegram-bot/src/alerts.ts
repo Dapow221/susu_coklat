@@ -51,23 +51,32 @@ export function startAlertPoller(opts: PollerOptions): void {
         cursor = next_cursor;
         initialized = true;
         consecutiveErrors = 0;
+        console.log(`[poller] initialized, cursor=${cursor}, current next_cursor=${next_cursor}`);
         return;
       }
 
+      if (events.length === 0) {
+        return;
+      }
+
+      console.log(`[poller] fetched ${events.length} new events, cursor=${cursor}, next=${next_cursor}`);
       for (const event of events) {
         try {
-          await bot.telegram.sendMessage(adminChatId, formatEvent(event));
-          console.log(`alert delivered: seq=${event.seq} kind=${event.kind}`);
-        } catch (err) {
-          console.error("alert send failed", err);
+          const result = await bot.telegram.sendMessage(adminChatId, formatEvent(event));
+          console.log(`[poller] alert delivered: seq=${event.seq} kind=${event.kind} msg_id=${result.message_id}`);
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          const code = (err as { code?: number }).code;
+          console.error(`[poller] send failed: code=${code} msg=${msg}`);
         }
       }
-      if (next_cursor > cursor) cursor = next_cursor;
+      cursor = next_cursor;
       consecutiveErrors = 0;
-    } catch (err) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
       consecutiveErrors += 1;
-      if (consecutiveErrors === 1 || consecutiveErrors % 10 === 0) {
-        console.error(`alert poller error (consecutive=${consecutiveErrors})`, err);
+      if (consecutiveErrors === 1 || consecutiveErrors % 5 === 0) {
+        console.error(`[poller] tick error (consecutive=${consecutiveErrors}): ${msg}`);
       }
     } finally {
       const backoff = Math.min(

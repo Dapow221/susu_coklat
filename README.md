@@ -26,33 +26,11 @@ WebSocket per pool
               -> Telegram alert
 ```
 
-## What happens, step by step
+## What this bot is
 
-Let's say someone launches a new token on Pump.fun: **"PEPEZILLA"**, mint `7xKDR...rQ2`. (Not a real token, just for the example.) It graduates to PumpSwap when its bonding curve fills.
+This scaffold is a Solana **sandwich entry** tool. It watches volume on Pump.fun token launches and Meteora DLMM pools, and when it spots a large pending entry that would move price, it prepares a Jito bundle (front-run → victim → back-run) to capture the spread.
 
-**The setup you'd do:**
-- Add a pool that *contains* PEPEZILLA to `config/pools.toml`. The pool address, base mint, and quote mint come from the on-chain pool account you'd fetch from the PumpSwap program.
-- Set `enabled = true`.
-
-**Now a buyer does this:** someone swaps **0.5 SOL → PEPEZILLA** on Raydium/PumpSwap/Jupiter.
-
-**What happens, step by step:**
-
-1. **t+0ms** — The buyer's signed tx lands in the mempool (or in Jito's pending-bundle queue).
-2. **t+5–50ms** — The tx is being processed. The pool reserves shift: WSOL goes down, PEPEZILLA goes down. The on-chain pool account's data changes.
-3. **t+10–100ms** — Your bot's WSS `accountSubscribe` callback fires. The engine reads the new reserves and recomputes spot price.
-   - Old price: 1 PEPEZILLA = 0.0000001234 SOL
-   - New price: 1 PEPEZILLA = 0.0000001267 SOL (price went up because the buyer took some PEPEZILLA out of the pool)
-4. **Gap check** — The bot asks Jupiter: "what's the aggregated PEPEZILLA/SOL price right now across all pools?" Say Jupiter says `0.0000001240`. The on-chain pool is at `0.0000001267`, so the pool is **rich in WSOL** (cheaper to buy PEPEZILLA elsewhere, more profitable to sell PEPEZILLA here, or arbitrage by buying cheap on Jupiter and selling here). The gap is `(1267 - 1240) / 1240 = ~2.18% = 218 bps`, well above `min_profit_bps = 20`.
-5. **Sizing** — Bot picks a trade size, say **0.05 SOL** worth of PEPEZILLA buy on this pool. Below `max_trade_lamports` (0.1 SOL), leaves profit on the table for size, etc.
-6. **Simulate** — Bot builds a VersionedTransaction (buy PEPEZILLA on this pool via Jupiter's swap instruction), calls `simulateTransaction`. If it reverts or profit < 0 after slippage, abort.
-7. **Jito bundle** — Bot wraps its tx in a Jito bundle with a tip (e.g. 10,000 lamports). Sends to `https://mainnet.block-engine.jito.wtf` (from `config/bot.toml`).
-8. **Landing** — A Jito validator includes the bundle at the top of the next block. The bot's tx lands *before* any subsequent trades that would've closed the gap.
-9. **Telegram** — Bot sends: `🔔 Arb filled. +0.00012 SOL profit. Tx: 5xK...` with timestamps displayed as UTC, for example `2026-06-02 22:56:11 UTC`.
-
-**Where the profit comes from:** the bot captured the price difference between *this pool's microsecond-old price* and Jupiter's aggregated price. The next trader who comes in pays a slightly worse price, which is roughly the bot's profit.
-
-**What this scaffold actually does today:** the loop is wired up but `real pool decoding and transaction building are TODOs` (per the engine's own log message). So the WebSocket → gap logic chain works at the macro level, but the bot can't actually fill any trades yet — there's no signer, no Jupiter swap instruction builder, no real `simulateTransaction` call.
+**Status:** scaffold only. The `dry_run` guard on the Jito client is in place, but the actual victim-target detector, mempool / pending-bundle listener, and front-run/back-run bundle construction are not implemented yet (see TODO list below). Do not load a funded wallet or flip `dry_run = false` until the attack pipeline is wired up and tested with tiny size.
 
 ## Run
 
@@ -301,4 +279,5 @@ Still TODO before live trading:
 
 - **Never** commit `.env` or any file containing your Telegram bot token or RPC key. The repo's `.gitignore` already excludes `.env`.
 - If you leak a token (e.g. in a chat), **revoke it immediately** at `@BotFather` (for Telegram) or in your RPC provider's dashboard. The leaked token is permanently in any history it touched.
-- The scaffold has no wallet signer loaded, so even in non-dry-run mode, the bot cannot broadcast a trade yet. Do not add a funded key until the TODO list is closed.
+- The scaffold has no wallet signer loaded, so even in non-dry-run mode, the bot cannot broadcast a sandwich yet. **Do not** add a funded key until the attack pipeline is fully wired and tested with tiny-size dry-runs.
+- **Ethical / legal warning:** sandwich attacks directly extract value from identified victims on every trade — the victim loses money on slippage that the bot captures. This is widely considered predatory in the Solana community. MEV front-running is also restricted or illegal in several jurisdictions under traditional finance analogues; check your local rules before deploying with real funds.
